@@ -144,8 +144,12 @@ body {
   background-color: #2FAA35;
 }
 
+.btn.monitoring:hover {
+  background-color: #238b2a;
+}
+
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 1;
   cursor: not-allowed;
 }
 

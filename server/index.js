@@ -6,6 +6,8 @@ const cors = require('cors');
 const net = require('net');
 const FileWatcher = require('./services/fileWatcher');
 const hyperdeckService = require('./services/hyperdeckService');
+const path = require('path');
+const fs = require('fs-extra');
 
 // Express app setup
 const app = express();
@@ -57,9 +59,11 @@ wss.on('connection', (ws, req) => {
       console.log('Received message:', data);
 
       switch (data.type) {
-          case 'CONNECT_HYPERDECK':
+        case 'CONNECT_HYPERDECK':
           try {
             await hyperdeckService.connect(data.ipAddress);
+            connectedDevices.set(ws, data.ipAddress); // Store the connection
+        
             // After connecting, scan both slots
             await hyperdeckService.sendCommand('slot select: 1');
             let clips1 = await hyperdeckService.getClipList();
@@ -119,10 +123,6 @@ wss.on('connection', (ws, req) => {
         case 'START_MONITORING':
           try {
             const hyperdeckIp = connectedDevices.get(ws);
-            if (!hyperdeckIp) {
-              throw new Error('Please connect to HyperDeck first');
-            }
-
             const fileWatcher = new FileWatcher({
               drives: data.drives,
               destinationPath: data.destinationPath,
@@ -155,9 +155,10 @@ wss.on('connection', (ws, req) => {
             activeWatchers.set(ws, fileWatcher);
             fileWatcher.startMonitoring();
             
+            // Send correct monitoring started message
             ws.send(JSON.stringify({
               type: 'MONITORING_STARTED',
-              message: 'Started monitoring HyperDeck for new files'
+              message: 'Monitoring has begun'
             }));
           } catch (error) {
             console.error('Error starting monitoring:', error);
@@ -172,17 +173,27 @@ wss.on('connection', (ws, req) => {
             try {
               const fileWatcher = activeWatchers.get(ws);
               if (fileWatcher) {
+                // First message about initiating transfer
                 ws.send(JSON.stringify({
                   type: 'TRANSFER_STATUS',
                   message: 'Initiating final transfer check...'
                 }));
                 
                 try {
+                  // Get the last transferred file information before stopping
+                  const lastFile = await fileWatcher.getNewFiles();
+                  const lastFilePath = lastFile && lastFile.length > 0 
+                    ? `${fileWatcher.destinationPath}/${lastFile[0].name}`
+                    : null;
+
                   await fileWatcher.stop();
                   
+                  // Send the monitoring stopped message with the file information
                   ws.send(JSON.stringify({
                     type: 'MONITORING_STOPPED',
-                    message: 'Monitoring stopped and final files transferred'
+                    message: 'Monitoring stopped and final files transferred',
+                    lastTransferredFile: lastFilePath,
+                    fileName: lastFile && lastFile.length > 0 ? lastFile[0].name : null
                   }));
                 } catch (error) {
                   ws.send(JSON.stringify({
@@ -201,6 +212,40 @@ wss.on('connection', (ws, req) => {
               }));
             }
             break;
+
+            case 'RENAME_FILE':
+              try {
+                const oldPath = data.oldPath;
+                const newName = data.newName;
+                const dirPath = path.dirname(oldPath);
+                
+                // Make sure the new name has the same extension as the old file
+                const oldExtension = path.extname(oldPath);
+                const newFileName = newName.endsWith(oldExtension) ? newName : `${newName}${oldExtension}`;
+                const newPath = path.join(dirPath, newFileName);
+            
+                console.log('Renaming file:', {
+                  oldPath,
+                  newPath,
+                  newFileName
+                });
+            
+                await fs.rename(oldPath, newPath);
+                
+                ws.send(JSON.stringify({
+                  type: 'FILE_RENAMED',
+                  message: 'File renamed successfully',
+                  oldName: path.basename(oldPath),
+                  newName: newFileName
+                }));
+              } catch (error) {
+                console.error('Error renaming file:', error);
+                ws.send(JSON.stringify({
+                  type: 'ERROR',
+                  message: `Failed to rename file: ${error.message}`
+                }));
+              }
+              break;
 
         default:
           ws.send(JSON.stringify({

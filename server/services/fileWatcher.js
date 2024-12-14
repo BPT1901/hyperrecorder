@@ -213,6 +213,14 @@ class FileWatcher extends EventEmitter {
       await fs.copy(filePath, destinationFilePath);
       console.log(`File transferred: ${filename}`);
       
+      // Emit an event with the destination path
+      this.emit('transferProgress', {
+        type: 'TRANSFER_STATUS',
+        message: 'File transfer complete',
+        destinationPath: destinationFilePath,
+        filename: filename
+      });
+      
       return destinationFilePath;
     } catch (error) {
       console.error('Error transferring file:', error);

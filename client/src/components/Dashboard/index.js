@@ -26,6 +26,8 @@ const Dashboard = () => {
   const [transferStatus, setTransferStatus] = useState(null);
   const [ws, setWs] = useState(null);
   const [notification, setNotification] = useState(null);
+  const [newFileName, setNewFileName] = useState('');
+  const [lastTransferredFile, setLastTransferredFile] = useState(null);
 
   const showNotification = (message, type) => {
     setNotification({ message, type });
@@ -70,6 +72,7 @@ const Dashboard = () => {
       try {
         const data = JSON.parse(event.data);
         console.log('Received message:', data);
+        console.log('Full message data:', data);
         
         switch (data.type) {
           case 'CONNECTED':
@@ -96,19 +99,50 @@ const Dashboard = () => {
               type: 'info'
             });
             break;
-          case 'TRANSFER_COMPLETE':
-            setTransferStatus({
-              message: `Success! File ${data.filename} has been transferred`,
-              type: 'success'
+            case 'TRANSFER_COMPLETE':
+              console.log('Transfer complete data:', data);  
+              setLastTransferredFile(data.filePath);  // This is crucial
+              setTransferStatus({
+                message: `Success! File ${data.filename} has been transferred`,
+                type: 'success'
             });
             break;
             case 'MONITORING_STOPPED':
               setIsMonitoring(false);
-              setTransferStatus({
-                message: 'Monitoring stopped',
-                type: 'success'
-              });
+              if (data.lastTransferredFile) {
+                setLastTransferredFile(data.lastTransferredFile);
+                setTransferStatus({
+                  message: `File transferred: ${data.fileName}`,
+                  type: 'success'
+                });
+              } else {
+                setTransferStatus({
+                  message: 'Monitoring stopped',
+                  type: 'success'
+                });
+              }
               break;
+              case 'TRANSFER_STATUS':
+                if (data.message.includes('final transfer check')) {
+                  // A file has been transferred
+                  const filePath = data.destinationPath; // This will be undefined until we update the server
+                  setLastTransferredFile(filePath);
+                  setTransferStatus({
+                    message: 'File transfer complete',
+                    type: 'success'
+                  });
+                }
+                break;
+
+              case 'FILE_RENAMED':
+                setTransferStatus({
+                  message: `File renamed to ${data.newName}`,
+                  type: 'success'
+                });
+                setNewFileName(''); // Clear the input
+                setLastTransferredFile(null); // Hide the rename section
+                break;
+
           case 'ERROR':
             setTransferStatus({
               message: `Error: ${data.message}`,
@@ -230,6 +264,26 @@ const Dashboard = () => {
     }
   };
 
+  const handleRenameFile = async () => {
+    if (!lastTransferredFile || !newFileName) return;
+    
+    try {
+      ws.send(JSON.stringify({
+        type: 'RENAME_FILE',
+        oldPath: lastTransferredFile,
+        newName: newFileName
+      }));
+    } catch (error) {
+      console.error('Error renaming file:', error);
+      setTransferStatus({
+        message: 'Failed to rename file',
+        type: 'error'
+      });
+    }
+  };
+
+  console.log('lastTransferredFile:', lastTransferredFile);
+
   return (
     <div className="app-container">
       {notification && (
@@ -313,14 +367,45 @@ const Dashboard = () => {
           </div>
 
           {/* Start/Stop Button */}
-            <button
-              className={`btn full-width ${isMonitoring ? 'monitoring' : ''}`}
-              onClick={isMonitoring ? stopWatching : startWatching}
-              disabled={!isConnected || !settings.destinationPath}
-            >
-              {isMonitoring ? 'Stop Monitoring' : 'Start Monitoring'}
-            </button>
-
+          <button
+            className={`btn full-width ${isMonitoring ? 'monitoring' : ''}`}
+            onClick={isMonitoring ? stopWatching : startWatching}
+            disabled={!isConnected || !settings.destinationPath}
+          >
+            {isMonitoring ? 'Stop Monitoring' : 'Start Monitoring'}
+          </button>
+          {/* File Renaming Section */}
+          {lastTransferredFile && (
+            <div className="mt-6 border-t pt-6">
+              <h2 className="text-lg font-semibold mb-4">Name Your File</h2>
+              <div className="input-group">
+                <input
+                  type="text"
+                  className="input-field"
+                  value={newFileName}
+                  onChange={(e) => setNewFileName(e.target.value)}
+                  placeholder="Enter new file name"
+                />
+                <button
+                  className="btn"
+                  onClick={handleRenameFile}
+                  disabled={!newFileName}
+                >
+                  <span className="flex items-center">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 mr-2"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h1a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h1v5.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3z" />
+                    </svg>
+                    Save
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         {/* Right Panel - FileList */}
         <div className="panel recordings-panel">
