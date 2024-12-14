@@ -1,4 +1,6 @@
+// FileList/index.js
 import { useState, useEffect } from 'react';
+import { Clock, HardDrive } from 'lucide-react';
 
 const FileList = ({ ws, isConnected }) => {
   const [files, setFiles] = useState([]);
@@ -6,15 +8,11 @@ const FileList = ({ ws, isConnected }) => {
   const [transferStatus, setTransferStatus] = useState('');
 
   useEffect(() => {
-    if (!ws) return;
+    if (!ws || !isConnected) return;
 
-    // Request file list when component mounts and websocket is available
-    if (isConnected) {
-      console.log('Requesting file list');
-      ws.send(JSON.stringify({ type: 'GET_FILE_LIST' }));
-    }
+    console.log('Requesting file list');
+    ws.send(JSON.stringify({ type: 'GET_FILE_LIST' }));
 
-    // Handle incoming messages
     const handleMessage = (event) => {
       const data = JSON.parse(event.data);
       console.log('FileList received:', data);
@@ -29,31 +27,34 @@ const FileList = ({ ws, isConnected }) => {
   }, [ws, isConnected]);
 
   return (
-    <div className="h-full">
+    <>
       <h2 className="text-lg font-semibold mb-4">Available Recordings</h2>
-      {files.length === 0 ? (
-        <p className="text-gray-500">No recordings found</p>
-      ) : (
-        <div className="space-y-4">
-          {files.map((file, index) => (
-            <div 
-              key={index}
-              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
-            >
-              <div>
-                <p className="font-medium">{file.name}</p>
-                <div className="text-sm text-gray-500 space-x-2">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
-                    Slot {file.slot}
-                  </span>
-                  <span>Duration: {file.duration || 'Unknown'}</span>
+      <div className="recordings-list">
+        {files.length === 0 ? (
+          <p className="text-gray-500">No recordings found</p>
+        ) : (
+          files.map((file, index) => (
+            <div key={index} className="recording-item">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">{file.name}</p>
+                  <div className="flex items-center mt-1 space-x-4">
+                    <div className="flex items-center">
+                      <HardDrive size={16} className="mr-1" />
+                      <span>Slot {file.slot}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Clock size={16} className="mr-1" />
+                      <span>{file.duration || 'Unknown'}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
+          ))
+        )}
+      </div>
+    </>
   );
 };
 
