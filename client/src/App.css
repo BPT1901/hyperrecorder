@@ -110,6 +110,14 @@ body {
   display: flex;
   justify-content: space-between;
   padding: 1rem 0;
+  width: 80%; /* Brings them closer together */
+  margin: 0 auto;
+}
+
+.drive-option {
+  display: flex;
+  align-items: center;
+  gap: 1rem; /* Increases space between checkbox and text */
 }
 
 /* Buttons */
@@ -121,7 +129,7 @@ body {
   padding: 0.75rem 1.5rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.15s ease-in-out;
 }
 
 .btn:hover {
@@ -130,7 +138,7 @@ body {
 
 .btn:active {
   background-color: #F7A44B;
-}
+} 
 
 .btn.monitoring {
   background-color: #2FAA35;
@@ -230,4 +238,17 @@ body {
   to {
     opacity: 0;
   }
+}
+
+.text-success {
+  color: #2FAA35;
+}
+
+.text-error {
+  color: #A90D0D;
+}
+
+.status-text {
+  font-weight: 500;
+  margin-top: 0.5rem;
 }

@@ -79,6 +79,13 @@ const Dashboard = () => {
               type: 'success'
             });
             break;
+            case 'MONITORING_STARTED':
+              setIsMonitoring(true);
+              setTransferStatus({
+                message: 'Monitoring started',
+                type: 'success'
+              });
+              break;  
           case 'CLIP_LIST':
             console.log('Received clip list:', data.clips);
             // FileList component will handle this
@@ -95,12 +102,13 @@ const Dashboard = () => {
               type: 'success'
             });
             break;
-          case 'MONITORING_STOPPED':
-            setTransferStatus({
-              message: 'Success, your file has been transferred',
-              type: 'success'
-            });
-            break;
+            case 'MONITORING_STOPPED':
+              setIsMonitoring(false);
+              setTransferStatus({
+                message: 'Monitoring stopped',
+                type: 'success'
+              });
+              break;
           case 'ERROR':
             setTransferStatus({
               message: `Error: ${data.message}`,
@@ -145,12 +153,18 @@ const Dashboard = () => {
     try {
       if (!ws) throw new Error('WebSocket not connected');
       if (!settings.destinationPath) throw new Error('Destination path not set');
-
+      if (!selectedDrives.ssd1 && !selectedDrives.ssd2) {
+        throw new Error('Please select at least one drive to monitor');
+      }
+  
       setIsMonitoring(true);
-      setTransferStatus('Starting monitoring...');
-
+      setTransferStatus({
+        message: 'Monitoring started',
+        type: 'success'
+      });
+  
       const sanitizedPath = sanitizePath(settings.destinationPath);
-
+  
       ws.send(JSON.stringify({
         type: 'START_MONITORING',
         drives: selectedDrives,
@@ -158,7 +172,10 @@ const Dashboard = () => {
       }));
     } catch (error) {
       console.error('Error starting monitoring:', error);
-      setTransferStatus('Failed to start monitoring');
+      setTransferStatus({
+        message: error.message,
+        type: 'error'
+      });
       setIsMonitoring(false);
     }
   };
@@ -169,20 +186,22 @@ const Dashboard = () => {
         const sanitizedPath = sanitizePath(settings.destinationPath);
         
         ws.send(JSON.stringify({
-          type: 'FINAL_CHECK',
+          type: 'STOP_MONITORING',
           drives: selectedDrives,
           destinationPath: sanitizedPath
         }));
-
-        ws.send(JSON.stringify({
-          type: 'STOP_MONITORING'
-        }));
       }
       setIsMonitoring(false);
-      setTransferStatus('Monitoring stopped');
+      setTransferStatus({
+        message: 'Monitoring stopped',
+        type: 'success'
+      });
     } catch (error) {
       console.error('Error stopping monitoring:', error);
-      setTransferStatus('Error stopping monitoring');
+      setTransferStatus({
+        message: 'Failed to stop monitoring',
+        type: 'error'
+      });
     }
   };
 
@@ -229,14 +248,9 @@ const Dashboard = () => {
           {/* Connection Status */}
           <div className="mb-6">
             <h2>Connection Status</h2>
-            <div className="status-indicator">
-              {isConnected ? (
-                <Check className="text-success" />
-              ) : (
-                <AlertCircle className="text-error" />
-              )}
-              <span>{isConnected ? 'Connected' : 'Disconnected'}</span>
-            </div>
+            <p className={`status-text ${isConnected ? 'text-success' : 'text-error'}`}>
+              {isConnected ? 'Connected' : 'Disconnected'}
+            </p>
           </div>
 
           {/* IP Input with inline button */}
