@@ -5,6 +5,7 @@ const http = require('http');
 const cors = require('cors');
 const net = require('net');
 const FileWatcher = require('./services/fileWatcher');
+const hyperdeckService = require('./services/hyperdeckService');
 
 // Express app setup
 const app = express();
@@ -56,42 +57,64 @@ wss.on('connection', (ws, req) => {
       console.log('Received message:', data);
 
       switch (data.type) {
-        case 'CONNECT_HYPERDECK':
+          case 'CONNECT_HYPERDECK':
           try {
-            const client = new net.Socket();
+            await hyperdeckService.connect(data.ipAddress);
+            // After connecting, scan both slots
+            await hyperdeckService.sendCommand('slot select: 1');
+            let clips1 = await hyperdeckService.getClipList();
+            await hyperdeckService.sendCommand('slot select: 2');
+            let clips2 = await hyperdeckService.getClipList();
             
-            client.connect(9993, data.ipAddress, () => {
-              console.log('Connected to HyperDeck at:', data.ipAddress);
-              connectedDevices.set(ws, data.ipAddress);
-              ws.send(JSON.stringify({
-                type: 'CONNECTED',
-                success: true
-              }));
-            });
-
-            client.on('error', (error) => {
-              console.error('HyperDeck connection error:', error);
-              ws.send(JSON.stringify({
-                type: 'ERROR',
-                message: 'Failed to connect to HyperDeck'
-              }));
-            });
-
-            client.on('close', () => {
-              console.log('HyperDeck connection closed');
-              connectedDevices.delete(ws);
-              ws.send(JSON.stringify({
-                type: 'DISCONNECTED'
-              }));
-            });
+            // Combine clips from both slots
+            const allClips = [
+              ...clips1.map(clip => ({ ...clip, slot: 1 })),
+              ...clips2.map(clip => ({ ...clip, slot: 2 }))
+            ];
+            
+            ws.send(JSON.stringify({
+              type: 'CLIP_LIST',
+              clips: allClips
+            }));
+            
+            ws.send(JSON.stringify({ 
+              type: 'CONNECTED',
+              message: 'Successfully connected to HyperDeck'
+            }));
           } catch (error) {
             console.error('Error connecting to HyperDeck:', error);
-            ws.send(JSON.stringify({
-              type: 'ERROR',
-              message: error.message
+            ws.send(JSON.stringify({ 
+              type: 'ERROR', 
+              message: 'Failed to connect to HyperDeck: ' + error.message 
             }));
           }
           break;
+
+          case 'GET_FILE_LIST':
+        try {
+          // Scan both slots again for updated list
+          await hyperdeckService.sendCommand('slot select: 1');
+          let clips1 = await hyperdeckService.getClipList();
+          await hyperdeckService.sendCommand('slot select: 2');
+          let clips2 = await hyperdeckService.getClipList();
+          
+          const allClips = [
+            ...clips1.map(clip => ({ ...clip, slot: 1 })),
+            ...clips2.map(clip => ({ ...clip, slot: 2 }))
+          ];
+          
+          ws.send(JSON.stringify({
+            type: 'CLIP_LIST',
+            clips: allClips
+          }));
+        } catch (error) {
+          console.error('Error getting clip list:', error);
+          ws.send(JSON.stringify({
+            type: 'ERROR',
+            message: 'Failed to get clip list'
+          }));
+        }
+        break;
 
         case 'START_MONITORING':
           try {

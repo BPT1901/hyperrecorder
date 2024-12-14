@@ -1,5 +1,6 @@
 // src/components/Dashboard/index.js
 import { useState, useEffect, useCallback } from 'react';
+import FileList from '../FileList';
 
 const Dashboard = () => {
   const [settings, setSettings] = useState({
@@ -15,7 +16,6 @@ const Dashboard = () => {
   const [transferStatus, setTransferStatus] = useState(null);
   const [ws, setWs] = useState(null);
 
-  // Add this utility function near the top with other functions
   const sanitizePath = (path) => {
     return path.replace(/\/+/g, '/');
   };
@@ -55,6 +55,10 @@ const Dashboard = () => {
               type: 'success'
             });
             break;
+          case 'CLIP_LIST':
+            console.log('Received clip list:', data.clips);
+            // FileList component will handle this
+            break;
           case 'FILE_TRANSFER':
             setTransferStatus({
               message: `Transferring: ${data.filename}`,
@@ -80,7 +84,6 @@ const Dashboard = () => {
             });
             break;
           default:
-            // Don't update UI for unknown message types
             console.log('Received message type:', data.type);
         }
       } catch (error) {
@@ -114,7 +117,6 @@ const Dashboard = () => {
     }
   };
 
-  // Updated startWatching function
   const startWatching = async () => {
     try {
       if (!ws) throw new Error('WebSocket not connected');
@@ -123,7 +125,6 @@ const Dashboard = () => {
       setIsMonitoring(true);
       setTransferStatus('Starting monitoring...');
 
-      // Ensure the path is properly formatted
       const sanitizedPath = sanitizePath(settings.destinationPath);
 
       ws.send(JSON.stringify({
@@ -138,7 +139,6 @@ const Dashboard = () => {
     }
   };
 
-  // Updated stopWatching function
   const stopWatching = async () => {
     try {
       if (ws) {
@@ -162,14 +162,12 @@ const Dashboard = () => {
     }
   };
 
-  // Updated handleFolderSelect function
   const handleFolderSelect = async () => {
     try {
       const directoryHandle = await window.showDirectoryPicker({
         mode: 'readwrite'
       });
       
-      // Construct the full path
       const fullPath = `/Users/benturner/Desktop/${directoryHandle.name}`;
       
       setSettings(prev => ({
@@ -189,7 +187,6 @@ const Dashboard = () => {
     }
   };
 
-  // Rest of your component remains the same
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow">
@@ -197,110 +194,105 @@ const Dashboard = () => {
           <h1 className="text-2xl font-bold text-gray-800">HyperRecorder</h1>
         </div>
       </nav>
-
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="bg-white shadow rounded-lg p-6">
-          {/* Connection Status */}
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-2">Connection Status</h2>
-            <p className={`text-sm p-2 rounded ${
-              !transferStatus ? 'text-gray-600' :
-              transferStatus.type === 'success' ? 'bg-green-100 text-green-800' :
-              transferStatus.type === 'error' ? 'bg-red-100 text-red-800' :
-              'bg-blue-100 text-blue-800'
-            }`}>{transferStatus ? transferStatus.message : (isConnected ? 'Connected' : 'Disconnected')}</p>
-          </div>
-
-          {/* IP Address Input */}
-          <div className="mb-6">
-            <input
-              type="text"
-              value={ipAddress}
-              onChange={(e) => setIpAddress(e.target.value)}
-              placeholder="HyperDeck IP Address"
-              className="border rounded p-2 w-full mb-2"
-              disabled={isConnected}
-            />
-            <button
-              onClick={connectToHyperdeck}
-              disabled={isConnected || !ipAddress}
-              className="bg-blue-500 text-white px-4 py-2 rounded disabled:bg-gray-300"
-            >
-              Connect to HyperDeck
-            </button>
-          </div>
-
-          {/* Drive Selection */}
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-2">Drive Selection</h2>
-            <div className="space-y-2">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={selectedDrives.ssd1}
-                  onChange={(e) => setSelectedDrives(prev => ({...prev, ssd1: e.target.checked}))}
-                  disabled={!isConnected || isMonitoring}
-                  className="mr-2"
-                />
-                SSD 1
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={selectedDrives.ssd2}
-                  onChange={(e) => setSelectedDrives(prev => ({...prev, ssd2: e.target.checked}))}
-                  disabled={!isConnected || isMonitoring}
-                  className="mr-2"
-                />
-                SSD 2
-              </label>
+  
+      <main className="container mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6" style={{ minHeight: '0' }}>
+          {/* Left Column - Controls */}
+          <div className="bg-white shadow rounded-lg p-6">
+            {/* Connection Status */}
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold mb-2">Connection Status</h2>
+              <p className={`text-sm p-2 rounded ${
+                !transferStatus ? 'text-gray-600' :
+                transferStatus.type === 'success' ? 'bg-green-100 text-green-800' :
+                transferStatus.type === 'error' ? 'bg-red-100 text-red-800' :
+                'bg-blue-100 text-blue-800'
+              }`}>{transferStatus ? transferStatus.message : (isConnected ? 'Connected' : 'Disconnected')}</p>
             </div>
-          </div>
-
-          {/* Destination Folder */}
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-2">Destination Folder</h2>
-            <div className="flex items-center">
+  
+            {/* IP Address Input */}
+            <div className="mb-6">
               <input
                 type="text"
-                value={settings.destinationPath}
-                className="border rounded p-2 flex-1 mr-2"
-                readOnly
-                placeholder="Select destination folder"
+                value={ipAddress}
+                onChange={(e) => setIpAddress(e.target.value)}
+                placeholder="HyperDeck IP Address"
+                className="border rounded p-2 w-full mb-2"
+                disabled={isConnected}
               />
               <button
-                onClick={handleFolderSelect}
-                disabled={!isConnected || isMonitoring}
+                onClick={connectToHyperdeck}
+                disabled={isConnected || !ipAddress}
                 className="bg-blue-500 text-white px-4 py-2 rounded disabled:bg-gray-300"
               >
-                Browse
+                Connect to HyperDeck
               </button>
             </div>
+  
+            {/* Drive Selection */}
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold mb-2">Drive Selection</h2>
+              <div className="space-y-2">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedDrives.ssd1}
+                    onChange={(e) => setSelectedDrives(prev => ({...prev, ssd1: e.target.checked}))}
+                    disabled={!isConnected || isMonitoring}
+                    className="mr-2"
+                  />
+                  SSD 1
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedDrives.ssd2}
+                    onChange={(e) => setSelectedDrives(prev => ({...prev, ssd2: e.target.checked}))}
+                    disabled={!isConnected || isMonitoring}
+                    className="mr-2"
+                  />
+                  SSD 2
+                </label>
+              </div>
+            </div>
+  
+            {/* Destination Folder */}
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold mb-2">Destination Folder</h2>
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  value={settings.destinationPath}
+                  className="border rounded p-2 flex-1 mr-2"
+                  readOnly
+                  placeholder="Select destination folder"
+                />
+                <button
+                  onClick={handleFolderSelect}
+                  disabled={!isConnected || isMonitoring}
+                  className="bg-blue-500 text-white px-4 py-2 rounded disabled:bg-gray-300"
+                >
+                  Browse
+                </button>
+              </div>
+            </div>
+  
+            {/* Start/Stop Button */}
+            <button
+              onClick={isMonitoring ? stopWatching : startWatching}
+              disabled={!isConnected || !settings.destinationPath}
+              className={`${
+                isMonitoring ? 'bg-red-500' : 'bg-green-500'
+              } text-white px-4 py-2 rounded disabled:bg-gray-300`}
+            >
+              {isMonitoring ? 'Stop Monitoring' : 'Start Monitoring'}
+            </button>
           </div>
-
-          {/* Settings */}
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-2">Settings</h2>
-            <input
-              type="text"
-              value={settings.destinationPath}
-              onChange={(e) => setSettings(prev => ({...prev, destinationPath: e.target.value}))}
-              placeholder="Destination Path"
-              className="border rounded p-2 w-full"
-              disabled={!isConnected || isMonitoring}
-            />
-          </div>
-
-          {/* Start/Stop Button */}
-          <button
-            onClick={isMonitoring ? stopWatching : startWatching}
-            disabled={!isConnected || !settings.destinationPath}
-            className={`${
-              isMonitoring ? 'bg-red-500' : 'bg-green-500'
-            } text-white px-4 py-2 rounded disabled:bg-gray-300`}
-          >
-            {isMonitoring ? 'Stop Monitoring' : 'Start Monitoring'}
-          </button>
+  
+          {/* Right Column - FileList */}
+          <div className="bg-white shadow rounded-lg p-6">
+          {isConnected && <FileList ws={ws} isConnected={isConnected} />}
+            </div>
         </div>
       </main>
     </div>

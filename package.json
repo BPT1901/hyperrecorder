@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "HyperDeck recording management web application",
   "scripts": {
-    "start": "react-scripts start",
+    "start": "concurrently \"cd server && node index.js\" \"cd client && npm start\"",
     "server": "node server/index.js",
     "dev": "concurrently \"npm run server\" \"npm run start\"",
     "build": "react-scripts build",
