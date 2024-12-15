@@ -134,14 +134,13 @@ const Dashboard = () => {
                 }
                 break;
 
-              case 'FILE_RENAMED':
-                setTransferStatus({
-                  message: `File renamed to ${data.newName}`,
-                  type: 'success'
-                });
-                setNewFileName(''); // Clear the input
-                setLastTransferredFile(null); // Hide the rename section
-                break;
+                case 'FILE_RENAMED':
+                  setTransferStatus({
+                    message: 'File has been saved to your destination',
+                    type: 'success'
+                  });
+                  setTimeout(() => setTransferStatus(null), 3000);
+                  break;
 
           case 'ERROR':
             setTransferStatus({
@@ -403,7 +402,7 @@ const Dashboard = () => {
         </div>
         {/* Right Panel - FileList */}
         <div className="panel recordings-panel">
-          {isConnected && <FileList ws={ws} isConnected={isConnected} />}
+          <FileList ws={ws} isConnected={isConnected} />
         </div>
       </main>
     </div>

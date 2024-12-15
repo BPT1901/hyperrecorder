@@ -213,6 +213,40 @@ wss.on('connection', (ws, req) => {
             }
             break;
 
+            case 'SAVE_RECORDING':
+              try {
+                const fileWatcher = new FileWatcher({
+                  drives: { [data.file.slot === 1 ? 'ssd1' : 'ssd2']: true },
+                  destinationPath: data.destinationPath,
+                  hyperdeckIp: connectedDevices.get(ws)
+                });
+
+                await fileWatcher.transferViaFTP({
+                  name: data.file.name,
+                  path: `ssd${data.file.slot}/${data.file.name}`,
+                  drive: `ssd${data.file.slot}`
+                });
+
+                // If a new filename was provided, rename the file
+                if (data.newFileName && data.newFileName !== data.file.name) {
+                  const oldPath = path.join(data.destinationPath, data.file.name);
+                  const newPath = path.join(data.destinationPath, data.newFileName);
+                  await fs.rename(oldPath, newPath);
+                }
+
+                ws.send(JSON.stringify({
+                  type: 'RECORDING_SAVED',
+                  message: 'Recording saved successfully'
+                }));
+              } catch (error) {
+                console.error('Error saving recording:', error);
+                ws.send(JSON.stringify({
+                  type: 'ERROR',
+                  message: `Failed to save recording: ${error.message}`
+                }));
+              }
+              break;
+
             case 'RENAME_FILE':
               try {
                 const oldPath = data.oldPath;
