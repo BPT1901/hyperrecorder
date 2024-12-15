@@ -1,7 +1,7 @@
 // src/components/Dashboard/index.js
 import { useState, useEffect, useCallback } from 'react';
 import FileList from '../FileList';
-import { AlertCircle, Check, HardDrive, Folder } from 'lucide-react';
+import { AlertCircle, Check, HardDrive, Folder, Save } from 'lucide-react';
 
 const Notification = ({ message, type }) => (
   <div className={`notification ${type}`}>
@@ -299,9 +299,11 @@ const Dashboard = () => {
       <main className="main-content">
         {/* Left Panel - Controls */}
         <div className="panel">
+          {/* Panel Title */}
+            <h2 className="text-xl font-semibold mb-4">Live Transfer</h2>
           {/* Connection Status */}
           <div className="mb-6">
-            <h2>Connection Status</h2>
+          <h2 className="text-lg mb-2">Connection Status</h2>
             <p className={`status-text ${isConnected ? 'text-success' : 'text-error'}`}>
               {isConnected ? 'Connected' : 'Disconnected'}
             </p>
@@ -376,36 +378,28 @@ const Dashboard = () => {
           </button>
           {/* File Renaming Section */}
           {lastTransferredFile && (
-            <div className="mt-6 border-t pt-6">
-              <h2 className="text-lg font-semibold mb-4">Name Your File</h2>
-              <div className="input-group">
-                <input
-                  type="text"
-                  className="input-field"
-                  value={newFileName}
-                  onChange={(e) => setNewFileName(e.target.value)}
-                  placeholder="Enter new file name"
-                />
-                <button
-                  className="btn"
-                  onClick={handleRenameFile}
-                  disabled={!newFileName}
-                >
-                  <span className="flex items-center">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 mr-2"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h1a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h1v5.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3z" />
-                    </svg>
-                    Save
+          <div className="mt-6 border-t pt-6">
+            <h2 className="text-lg font-semibold mb-2">Name Your File</h2>
+            <div className="input-group">
+              <input
+                type="text"
+                className="input-field"
+                value={newFileName}
+                onChange={(e) => setNewFileName(e.target.value)}
+                placeholder="Enter new file name"
+              />
+              <button
+                className="btn"
+                onClick={handleRenameFile}
+                disabled={!newFileName}
+              >
+                <span className="flex items-center justify-center">
+                  <Save size={18} /> {/* Using Lucide Save icon */}
                   </span>
                 </button>
-              </div>
             </div>
-          )}
+          </div>
+        )}
         </div>
         {/* Right Panel - FileList */}
         <div className="panel recordings-panel">
