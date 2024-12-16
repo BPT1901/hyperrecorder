@@ -12,7 +12,7 @@ const Notification = ({ message, type }) => (
   </div>
 );
 
-const Dashboard = () => {
+const Dashboard = ({ onConnect }) => {
   const [settings, setSettings] = useState({
     destinationPath: ''
   });
@@ -176,6 +176,7 @@ const Dashboard = () => {
         type: 'CONNECT_HYPERDECK',
         ipAddress
       }));
+      onConnect(ipAddress); // Update the tab name on successful connection
     } catch (error) {
       console.error('Error connecting to HyperDeck:', error);
       setTransferStatus('Failed to connect to HyperDeck');
