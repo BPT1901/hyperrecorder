@@ -293,7 +293,7 @@ const Dashboard = ({ onConnect }) => {
       )}
 
       <header className="header">
-        <h1>HyperRecorder</h1>
+        <h1>Hyperporter</h1>
       </header>
 
       <main className="main-content">
